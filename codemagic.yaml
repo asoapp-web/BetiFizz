@@ -10,7 +10,7 @@ workflows:
         distribution_type: app_store
         bundle_identifier: com.beti.fizz
       vars:
-        BUNDLE_ID: "com.BetiFizz"
+        BUNDLE_ID: "com.betiFizz"
         XCODE_SCHEME: "BetiFizz"
         APP_STORE_APPLE_ID: 6761179199
       xcode: latest
