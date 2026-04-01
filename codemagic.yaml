@@ -16,17 +16,23 @@ workflows:
       xcode: latest
     scripts:
       - name: Set up provisioning profiles settings on Xcode project
-        script: xcode-project use-profiles
+        script: |
+          # Отключаем manual signing и включаем automatic
+          xcode-project use-profiles
+          
       - name: Increment build number
         script: |
           cd "$CM_BUILD_DIR"
           LATEST_BUILD_NUMBER=$(app-store-connect get-latest-app-store-build-number "$APP_STORE_APPLE_ID")
           agvtool new-version -all $(($LATEST_BUILD_NUMBER + 1))
+          
       - name: Build ipa for distribution
         script: |
+          # Используем автоматическую подпись
           xcode-project build-ipa \
             --project "BetiFizz.xcodeproj" \
-            --scheme "$XCODE_SCHEME"
+            --scheme "$XCODE_SCHEME" \
+            --code-signing-style "Automatic"
     artifacts:
       - build/ios/ipa/*.ipa
     publishing:
