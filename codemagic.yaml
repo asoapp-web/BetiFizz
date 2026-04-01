@@ -15,24 +15,53 @@ workflows:
         APP_STORE_APPLE_ID: 6761179199
       xcode: latest
     scripts:
-      - name: Set up provisioning profiles settings on Xcode project
-        script: |
-          # Отключаем manual signing и включаем automatic
-          xcode-project use-profiles
-          
+      - name: Set up provisioning profiles
+        script: xcode-project use-profiles
+        
       - name: Increment build number
         script: |
           cd "$CM_BUILD_DIR"
           LATEST_BUILD_NUMBER=$(app-store-connect get-latest-app-store-build-number "$APP_STORE_APPLE_ID")
           agvtool new-version -all $(($LATEST_BUILD_NUMBER + 1))
           
-      - name: Build ipa for distribution
+      - name: Archive project
         script: |
-          # Используем автоматическую подпись
-          xcode-project build-ipa \
-            --project "BetiFizz.xcodeproj" \
-            --scheme "$XCODE_SCHEME" \
-            --code-signing-style "Automatic"
+          # Создаем директорию для архива
+          mkdir -p build/ios/xcarchive
+          
+          # Архивация проекта
+          xcodebuild archive \
+            -project "BetiFizz.xcodeproj" \
+            -scheme "$XCODE_SCHEME" \
+            -archivePath "build/ios/xcarchive/BetiFizz.xcarchive" \
+            -allowProvisioningUpdates \
+            -destination 'generic/platform=iOS'
+          
+      - name: Export IPA
+        script: |
+          # Создаем exportOptions.plist
+          cat > exportOptions.plist << EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>method</key>
+              <string>app-store</string>
+              <key>uploadSymbols</key>
+              <true/>
+              <key>stripSwiftSymbols</key>
+              <true/>
+          </dict>
+          </plist>
+          EOF
+          
+          # Экспортируем IPA
+          xcodebuild -exportArchive \
+            -archivePath "build/ios/xcarchive/BetiFizz.xcarchive" \
+            -exportOptionsPlist exportOptions.plist \
+            -exportPath "build/ios/ipa" \
+            -allowProvisioningUpdates
+          
     artifacts:
       - build/ios/ipa/*.ipa
     publishing:
